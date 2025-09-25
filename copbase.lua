@@ -1,7 +1,4 @@
-local data = CopBase.init
-function CopBase:init(unit)
-	data(self, unit)
-	
+Hooks:PostHook(CopBase, "init", "WpnChgr.CopBase.init", function(self, ...)
 	if self._char_tweak.weapon then
 		for id, preset in pairs(tweak_data.character.custom_weaponry) do
 			if not self._char_tweak.weapon[id] or id == "is_shotgun_mag" or id == "is_lmg" or id == "mini" then
@@ -20,7 +17,6 @@ function CopBase:init(unit)
 				preset.tase_sphere_cast_radius = 30
 				preset.aim_delay_tase = {0, 0}
 			elseif self._tweak_table == "sniper" then
-				
 				preset.range = {close = 15000, optimal = 15000, far = 15000}
 				preset.use_laser = true
 				
@@ -45,22 +41,20 @@ function CopBase:init(unit)
 			end
 		end
 	end
-end
+end)
 
-local data = CopBase.default_weapon_name
-function CopBase:default_weapon_name(selection_name)
+Hooks:PreHook(CopBase, "default_weapon_name", "WpnChgr.CopBase.default_weapon_name", function(self, ...)
 	local custom_weapon = WpnChgr:change_weapon(self._unit)
-
-	if self._equiped then
-		local akimbo_found = string.find(tweak_data.character.weap_ids[table.get_key(tweak_data.character.weap_unit_names, self._equiped)], "x_") or 0
-		if self._unit:brain()._logic_data and self._unit:brain()._logic_data.is_converted and akimbo_found == 1 then
-			return data(self, selection_name)
-		else
-			return self._equiped
-		end
+	if self._unit:brain()._logic_data and self._unit:brain()._logic_data.is_converted and custom_weapon == "x_c45" then
+		custom_weapon = "c45"
 	end
 	
-	self._equiped = custom_weapon or data(self, selection_name)
+	if self._default_weapons then
+		self._default_weapons.primary = custom_weapon
+		self._default_weapons.secondary = custom_weapon
+	end
 	
-	return self._equiped
-end
+	if self._default_weapon_id and custom_weapon then
+		self._default_weapon_id = custom_weapon
+	end
+end)

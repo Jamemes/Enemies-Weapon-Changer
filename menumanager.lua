@@ -254,7 +254,7 @@ function WpnChgr:change_weapon(unit)
 					return
 				end
 
-				return weapon_id
+				return tbl[1]
 			end
 		end
 	end
