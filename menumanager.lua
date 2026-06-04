@@ -5,9 +5,8 @@ Hooks:Add("LocalizationManagerPostInit", "WpnChgr_loc", function(...)
 		menu_reset_text = "Are you sure you wanna reset all settings to default?",
 		randomize_slider = "Randomize weapons",
 		overall_random = "Overall weapon randomization",
-		overall_random_slider = "Randomize weapons for all units. You have to confirm the changes to avoid an unexpected game lag.",
+		overall_random_slider = "Randomize weapons for all units.",
 		confirm_overall_random = "Confirm randomizer",
-		overall_random_text = "Overall weapon randomization may cause a lag. The lag length depends on how many weapons you choose in the slider and also on your PC performance. It might be quick, it could take 2-3 seconds or even freeze the game completely, if your hardware is weak.",
 		overall_random_confirmation = "Are you really sure?",
 		
 		bm_w_ak47 = "AK47 Rifle",
@@ -76,9 +75,8 @@ Hooks:Add("LocalizationManagerPostInit", "WpnChgr_loc", function(...)
 			menu_reset_text = "Вы уверены что хотите сбросить настройки к стандартному значению?",
 			randomize_slider = "Перемешать оружие",
 			overall_random = "Общая перемешка оружия",
-			overall_random_slider = "Рандомизирует оружие для всех юнитов. Вы должны подтвердить действие, чтобы избежать непредвиденного лага игры.",
+			overall_random_slider = "Рандомизирует оружие для всех юнитов.",
 			confirm_overall_random = "Подтвердить перемешку",
-			overall_random_text = "Общая перемешка оружия может привести к лагу игры. Продолжительность лага зависит от того какое количество оружия вы выберете в слайдере и также от производительности вашего компьютера. Это может быть быстро, может занять 2-3 секунды или вовсе привести к полному фризу игры, если ваше комьютерное железо слабо.",
 			overall_random_confirmation = "Вы действительно уверены?",
 		})
 	end
@@ -476,11 +474,18 @@ Hooks:Add("MenuManagerBuildCustomMenus", "WC_populate_categories", function(menu
 end)
 
 MenuCallbackHandler.confirm_all_randomize_callback = function(self, item)
+	local in_total = 0
+	for k, v in pairs(WpnChgr:category_units_list()) do
+		in_total = in_total + table.size(v)
+	end
+	in_total = in_total * WpnChgr.overall_value
+
 	if WpnChgr.overall_value and WpnChgr.overall_value > 0 then
 		local function randomize_all()
+			local rate = 0
+			local count = 0
 			for id, pack in pairs(WpnChgr:category_units_list()) do
 				for unit_id, unit_name in pairs(pack) do
-				
 					local list = table.shuffled_copy(tweak_data.character.weap_ids)
 					table.crop(list, WpnChgr.overall_value)
 
@@ -498,41 +503,53 @@ MenuCallbackHandler.confirm_all_randomize_callback = function(self, item)
 							item.selected = WpnChgr.settings[unit_name] and table.contains(WpnChgr.settings[unit_name], item._parameters.name) and 1 or 2
 						end
 					end
-					
+
+					count = count + WpnChgr.overall_value
+
+					local dlg = managers.system_menu:get_dialog("overall_random_wait")
+					if dlg then
+						dlg:set_text(managers.localization:text("dialog_wait") .. " " .. math.round(count / in_total * 100) .. "%")
+					end
+
+					if rate < 2 then
+						rate = rate + 1
+					else
+						rate = 0
+						coroutine.yield()
+					end
 				end
 			end
+
 			managers.viewport:resolution_changed()
+			managers.system_menu:close("overall_random_wait")
 		end
-				
-		local dialog_data = {
+		
+		local confirmation = {
 			title = managers.localization:text("overall_random"),
-			text = managers.localization:text("overall_random_text"),
+			text = managers.localization:text("overall_random_confirmation"),
 			button_list = {
 				{
-					text = managers.localization:text("dialog_ok"),
+					text = managers.localization:text("dialog_accept"),
 					callback_func = function()
-						local confirmation = {
+						managers.system_menu:show({
 							title = managers.localization:text("overall_random"),
-							text = managers.localization:text("overall_random_confirmation"),
-							button_list = {
-								{
-									text = managers.localization:text("dialog_accept"),
-									callback_func = function()
-										randomize_all()
-									end
-								},
-								{
-									text = managers.localization:text("menu_back"),
-									cancel_button = true
-								}
-							}
-						}
-						managers.system_menu:show(confirmation)
+							text = managers.localization:to_upper_text("dialog_wait") .. " 0%",
+							id = "overall_random_wait",
+							no_buttons = true
+						})
+						managers.menu:active_menu().renderer.ws:panel():animate(randomize_all)
 					end
+				},
+				{
+					text = managers.localization:text("menu_back"),
+					cancel_button = true
 				}
 			}
 		}
+		managers.system_menu:show(confirmation)
+
+
+	
 		
-		managers.system_menu:show(dialog_data)
 	end
 end
