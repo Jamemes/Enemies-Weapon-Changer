@@ -43,18 +43,32 @@ Hooks:PostHook(CopBase, "init", "WpnChgr.CopBase.init", function(self, ...)
 	end
 end)
 
-Hooks:PreHook(CopBase, "default_weapon_name", "WpnChgr.CopBase.default_weapon_name", function(self, ...)
+local data = CopBase.default_weapon_name
+function CopBase:default_weapon_name(selection_name)
+	local weapon_id = data(self, selection_name)
 	local custom_weapon = WpnChgr:change_weapon(self._unit)
 	if self._unit:brain()._logic_data and self._unit:brain()._logic_data.is_converted and custom_weapon == "x_c45" then
 		custom_weapon = "c45"
 	end
-	
-	if self._default_weapons then
-		self._default_weapons.primary = custom_weapon
-		self._default_weapons.secondary = custom_weapon
+
+	if custom_weapon then
+		if self._default_weapons then
+			self._default_weapons.primary = custom_weapon
+			self._default_weapons.secondary = custom_weapon
+		end
+		
+		if self._default_weapon_id then
+			self._default_weapon_id = custom_weapon
+		end
+
+		local weap_ids = tweak_data.character.weap_ids
+		local weap_unit_names = tweak_data.character.weap_unit_names
+		for i_weap_id, weap_id in ipairs(weap_ids) do
+			if self._default_weapon_id == weap_id then
+				return weap_unit_names[i_weap_id]
+			end
+		end
+	else
+		return weapon_id
 	end
-	
-	if self._default_weapon_id and custom_weapon then
-		self._default_weapon_id = custom_weapon
-	end
-end)
+end
